@@ -1,5 +1,16 @@
 class AppConstants {
-  // Indian States
+  static const String appName = 'AESTHETE';
+  static const String appTagline = 'Digital Craft Marketplace';
+
+  static const List<String> categories = [
+    'All Works',
+    'Ceramics',
+    'Textiles',
+    'Woodworking',
+    'Metalwork',
+    'Handicrafts',
+  ];
+
   static const List<String> indianStates = [
     'Andhra Pradesh',
     'Arunachal Pradesh',
@@ -25,9 +36,7 @@ class AppConstants {
     'Sikkim',
     'Tamil Nadu',
     'Telangana',
-    'Tripura',
     'Uttar Pradesh',
-    'Uttarakhand',
     'West Bengal',
     'Andaman and Nicobar Islands',
     'Chandigarh',
@@ -39,45 +48,13 @@ class AppConstants {
     'Puducherry',
   ];
 
-  // Craft Categories
-  static const List<String> craftCategories = [
-    'Handicrafts',
-    'Textiles',
-    'Pottery',
-    'Jewelry',
-    'Woodwork',
-    'Metalwork',
-    'Stone Carving',
-    'Painting',
-    'Embroidery',
-    'Leather Work',
-    'Bamboo Work',
-    'Paper Mache',
-    'Other',
-  ];
-
-  // Languages
-  static const Map<String, String> languages = {
-    'te': 'Telugu',
-    'hi': 'Hindi',
-    'en': 'English',
-    'ta': 'Tamil',
-    'kn': 'Kannada',
-    'ml': 'Malayalam',
-    'bn': 'Bengali',
-    'mr': 'Marathi',
-    'gu': 'Gujarati',
-    'pa': 'Punjabi',
-    'ur': 'Urdu',
-    'or': 'Odia',
-    'as': 'Assamese',
-  };
-
-  // Business Types
-  static const List<String> businessTypes = [
-    'Individual Artisan',
-    'Small Business',
-    'Cooperative',
-    'Self-Help Group',
+  static const List<String> supportedLanguages = [
+    'English',
+    'Hindi',
+    'Telugu',
+    'Tamil',
+    'Bengali',
+    'Marathi',
+    'Gujarati',
   ];
 }
