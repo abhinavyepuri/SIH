@@ -6,6 +6,8 @@ import { StatCard } from "@/components/ui";
 import { fetchApi } from "@/lib/api/client";
 import { useAuth } from "@/stores/AuthContext";
 
+import { useRouter } from "next/navigation";
+
 interface Insight {
   title: string;
   description: string;
@@ -14,18 +16,26 @@ interface Insight {
 
 export default function ArtisanDashboard() {
   const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
   const [stats, setStats] = useState({ posts: 0, reach: "0", revenue: "₹0" });
   const [insights, setInsights] = useState<Insight[]>([]);
   const [products, setProducts] = useState<any[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user?.id) return;
-    
-    // Fetch products and stats
+    if (!user?.id) {
+      router.push("/login?role=artisan");
+      return;
+    }
+
     const fetchData = async () => {
       try {
-        const productsRes = await fetchApi(`/artisans/${user.id}/products`);
+        const [productsRes, ordersRes] = await Promise.all([
+          fetchApi(`/artisans/${user.id}/products`),
+          fetchApi("/orders/"),
+        ]);
+
         let artisanProducts: any[] = [];
         if (productsRes.ok) {
           const productsData = await productsRes.json();
@@ -34,7 +44,6 @@ export default function ArtisanDashboard() {
         }
 
         let totalRevenue = 0;
-        const ordersRes = await fetchApi(`/orders/`);
         if (ordersRes.ok) {
           const ordersData = await ordersRes.json();
           const ordersList = Array.isArray(ordersData) ? ordersData : ordersData.orders || [];
@@ -63,7 +72,7 @@ export default function ArtisanDashboard() {
             0
           );
         }
-        
+
         setStats({
           posts: artisanProducts.length,
           reach: `${artisanProducts.length * 14 + 10}`,
@@ -71,14 +80,14 @@ export default function ArtisanDashboard() {
         });
       } catch (err) {
         console.error("Error fetching artisan data:", err);
+      } finally {
+        setDataLoading(false);
       }
     };
-    
-    fetchData();
 
-    // In a real app, this would be fetched from an AI insights API
+    fetchData();
     setInsights([]);
-  }, [user]);
+  }, [user, authLoading, router]);
 
   return (
     <div>

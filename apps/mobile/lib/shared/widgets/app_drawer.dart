@@ -80,7 +80,7 @@ class AppDrawer extends StatelessWidget {
                   ),
                   const SizedBox(height: 14),
                   Text(
-                    isAuthenticated ? user!.name : 'Welcome to AESTHETE',
+                    isAuthenticated ? user!.name : 'Welcome to Aroha',
                     style: const TextStyle(
                       fontFamily: 'serif',
                       fontSize: 18,
@@ -199,37 +199,85 @@ class AppDrawer extends StatelessWidget {
 
             // Footer / Sign Out
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: const BoxDecoration(
                 border: Border(top: BorderSide(color: AppColors.border)),
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextButton.icon(
-                      icon: Icon(
-                        isAuthenticated ? Icons.logout : Icons.exit_to_app,
-                        size: 18,
-                        color: AppColors.warmGray,
-                      ),
-                      label: Text(
-                        isAuthenticated ? 'Sign Out' : 'Back to Portals',
-                        style: const TextStyle(color: AppColors.navy, fontWeight: FontWeight.w600),
-                      ),
-                      onPressed: () {
-                        Navigator.pop(context);
-                        if (isAuthenticated) {
-                          appState.auth.logout();
-                        }
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(builder: (_) => const WelcomeScreen()),
-                          (route) => false,
-                        );
-                      },
+              child: SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: ElevatedButton.icon(
+                  icon: Icon(
+                    isAuthenticated ? Icons.logout : Icons.exit_to_app,
+                    size: 18,
+                    color: isAuthenticated ? Colors.white : AppColors.navy,
+                  ),
+                  label: Text(
+                    isAuthenticated ? 'Sign Out of Account' : 'Back to Portals',
+                    style: TextStyle(
+                      color: isAuthenticated ? Colors.white : AppColors.navy,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
                     ),
                   ),
-                ],
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isAuthenticated ? AppColors.terracotta : AppColors.cream,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      side: BorderSide(color: isAuthenticated ? AppColors.terracotta : AppColors.border),
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    if (isAuthenticated) {
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          backgroundColor: AppColors.surface,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          title: const Text(
+                            'Sign Out',
+                            style: TextStyle(fontFamily: 'serif', fontWeight: FontWeight.w800, color: AppColors.navy),
+                          ),
+                          content: const Text(
+                            'Are you sure you want to sign out of your account?',
+                            style: TextStyle(fontSize: 13, color: AppColors.warmGray),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              child: const Text('Cancel', style: TextStyle(color: AppColors.warmGray, fontWeight: FontWeight.w600)),
+                            ),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.terracotta,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                elevation: 0,
+                              ),
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                appState.auth.logout();
+                                Navigator.pushAndRemoveUntil(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+                                  (route) => false,
+                                );
+                              },
+                              child: const Text('Sign Out', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                            ),
+                          ],
+                        ),
+                      );
+                    } else {
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+                        (route) => false,
+                      );
+                    }
+                  },
+                ),
               ),
             ),
           ],

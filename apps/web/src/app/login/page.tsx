@@ -157,9 +157,14 @@ function LoginForm() {
       <div className="text-center mb-8">
         <Link
           href="/"
-          className="font-serif text-3xl tracking-[0.15em] font-bold text-navy block mb-6"
+          className="block mb-6 group text-center"
         >
-          AESTHETE
+          <span className="font-serif text-3xl tracking-[0.15em] font-bold text-navy block">
+            AROHA
+          </span>
+          <span className="text-xs text-warm-gray lowercase font-medium block mt-0.5">
+            where artists meet the market
+          </span>
         </Link>
         <h1 className="font-serif text-2xl text-navy mb-1">
           {step === "role-email"

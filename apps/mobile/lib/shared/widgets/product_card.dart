@@ -55,7 +55,7 @@ class ProductCard extends StatelessWidget {
                         ? Image.network(
                             imageUrl,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _buildPlaceholder(),
+                            errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
                             loadingBuilder: (ctx, child, progress) {
                               if (progress == null) return child;
                               return Container(

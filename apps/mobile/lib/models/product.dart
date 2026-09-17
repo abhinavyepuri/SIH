@@ -45,6 +45,12 @@ class Product {
     return list.isNotEmpty ? list.first : null;
   }
 
+  bool get isGiCertified {
+    if (tags != null && tags!.toLowerCase().contains('gi')) return true;
+    if (category.toLowerCase().contains('gi')) return true;
+    return false;
+  }
+
   factory Product.fromJson(Map<String, dynamic> json) {
     return Product(
       id: json['id'] ?? '',

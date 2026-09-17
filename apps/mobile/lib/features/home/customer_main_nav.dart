@@ -7,8 +7,6 @@ import '../collections/collections_screen.dart';
 import '../artisans/artisans_list_screen.dart';
 import '../cart/cart_screen.dart';
 import '../orders/orders_screen.dart';
-import '../wishlist/wishlist_screen.dart';
-import '../auth/auth_screen.dart';
 
 class CustomerMainNav extends StatefulWidget {
   const CustomerMainNav({super.key});
@@ -32,9 +30,6 @@ class _CustomerMainNavState extends State<CustomerMainNav> {
   Widget build(BuildContext context) {
     final appState = AppState.of(context);
     final cartCount = appState.cart.itemCount;
-    final wishlistCount = appState.wishlist.count;
-    final user = appState.auth.currentUser;
-    final isAuthenticated = appState.auth.isAuthenticated;
 
     return Scaffold(
       drawer: AppDrawer(

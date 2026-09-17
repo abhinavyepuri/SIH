@@ -115,7 +115,23 @@ export default function AdminDashboard() {
   }, []);
 
   if (loading) {
-    return <div className="py-20 text-center text-warm-gray">Loading platform metrics...</div>;
+    return (
+      <div className="space-y-8 animate-pulse">
+        <div className="flex items-center justify-between">
+          <div className="h-8 w-64 bg-border/60 rounded-lg" />
+          <div className="h-9 w-36 bg-border/60 rounded-lg" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-28 bg-white rounded-2xl border border-border/80 p-5" />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="h-64 bg-white rounded-3xl border border-border/80 p-6" />
+          <div className="h-64 bg-white rounded-3xl border border-border/80 p-6" />
+        </div>
+      </div>
+    );
   }
 
   return (

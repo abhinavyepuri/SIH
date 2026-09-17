@@ -18,8 +18,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "AESTHETE — Digital Craft Marketplace",
-  description: "Discover unique, handcrafted treasures directly from master artisans across India.",
+  title: "Aroha — Where Artists Meet the Market",
+  description: "Aroha — Where artists meet the market. Discover unique, handcrafted treasures directly from master artisans across India.",
 };
 
 export default function RootLayout({

@@ -1,12 +1,15 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class ApiClient {
   static String? authToken;
+  static String? customBaseUrl;
 
   static String get baseUrl {
+    if (customBaseUrl != null && customBaseUrl!.isNotEmpty) {
+      return customBaseUrl!;
+    }
     if (kIsWeb) {
       return 'http://localhost:8000/api/v1';
     } else if (defaultTargetPlatform == TargetPlatform.android) {
@@ -53,34 +56,82 @@ class ApiClient {
       uri = uri.replace(queryParameters: queryParams);
     }
 
-    final response = await http.get(uri, headers: _getHeaders());
-    return _handleResponse(response);
+    try {
+      final response = await http
+          .get(uri, headers: _getHeaders())
+          .timeout(const Duration(seconds: 5), onTimeout: () {
+        throw ApiException(
+          statusCode: 408,
+          message: 'Connection timed out. Please verify backend is running on $baseUrl.',
+        );
+      });
+      return _handleResponse(response);
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException(statusCode: 503, message: 'Server unreachable at $baseUrl: $e');
+    }
   }
 
   static Future<dynamic> post(String endpoint, Map<String, dynamic> data) async {
     final uri = Uri.parse('$baseUrl$endpoint');
-    final response = await http.post(
-      uri,
-      headers: _getHeaders(),
-      body: jsonEncode(data),
-    );
-    return _handleResponse(response);
+    try {
+      final response = await http
+          .post(
+            uri,
+            headers: _getHeaders(),
+            body: jsonEncode(data),
+          )
+          .timeout(const Duration(seconds: 5), onTimeout: () {
+        throw ApiException(
+          statusCode: 408,
+          message: 'Connection timed out. Please verify backend is running on $baseUrl.',
+        );
+      });
+      return _handleResponse(response);
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException(statusCode: 503, message: 'Server unreachable at $baseUrl: $e');
+    }
   }
 
   static Future<dynamic> put(String endpoint, Map<String, dynamic> data) async {
     final uri = Uri.parse('$baseUrl$endpoint');
-    final response = await http.put(
-      uri,
-      headers: _getHeaders(),
-      body: jsonEncode(data),
-    );
-    return _handleResponse(response);
+    try {
+      final response = await http
+          .put(
+            uri,
+            headers: _getHeaders(),
+            body: jsonEncode(data),
+          )
+          .timeout(const Duration(seconds: 5), onTimeout: () {
+        throw ApiException(
+          statusCode: 408,
+          message: 'Connection timed out. Please verify backend is running on $baseUrl.',
+        );
+      });
+      return _handleResponse(response);
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException(statusCode: 503, message: 'Server unreachable at $baseUrl: $e');
+    }
   }
 
   static Future<dynamic> delete(String endpoint) async {
     final uri = Uri.parse('$baseUrl$endpoint');
-    final response = await http.delete(uri, headers: _getHeaders());
-    return _handleResponse(response);
+    try {
+      final response = await http
+          .delete(uri, headers: _getHeaders())
+          .timeout(const Duration(seconds: 5), onTimeout: () {
+        throw ApiException(
+          statusCode: 408,
+          message: 'Connection timed out. Please verify backend is running on $baseUrl.',
+        );
+      });
+      return _handleResponse(response);
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException(statusCode: 503, message: 'Server unreachable at $baseUrl: $e');
+    }
   }
 
   /// Uploads binary file bytes with multipart/form-data
@@ -104,7 +155,15 @@ class ApiClient {
       ),
     );
 
-    final streamedResponse = await request.send();
+    final streamedResponse = await request.send().timeout(
+      const Duration(seconds: 30),
+      onTimeout: () {
+        throw ApiException(
+          statusCode: 408,
+          message: 'Upload timed out. Check network connection and backend.',
+        );
+      },
+    );
     final response = await http.Response.fromStream(streamedResponse);
     return _handleResponse(response);
   }

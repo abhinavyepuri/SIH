@@ -1,4 +1,6 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/network/api_client.dart';
@@ -9,8 +11,15 @@ import '../../shared/widgets/custom_text_field.dart';
 
 class ListProductScreen extends StatefulWidget {
   final Product? editProduct;
+  final bool isTab;
+  final VoidCallback? onSaved;
 
-  const ListProductScreen({super.key, this.editProduct});
+  const ListProductScreen({
+    super.key,
+    this.editProduct,
+    this.isTab = false,
+    this.onSaved,
+  });
 
   @override
   State<ListProductScreen> createState() => _ListProductScreenState();
@@ -27,12 +36,22 @@ class _ListProductScreenState extends State<ListProductScreen> {
   late TextEditingController _imageUrlController;
   late TextEditingController _tagsController;
 
+  final ImagePicker _picker = ImagePicker();
+  Uint8List? _selectedImageBytes;
+  String? _uploadedImageUrl;
+  bool _isUploadingImage = false;
+  bool _showManualUrlInput = false;
+
   String _selectedCategory = 'Ceramics';
   bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
+    _initForm();
+  }
+
+  void _initForm() {
     final p = widget.editProduct;
     _titleController = TextEditingController(text: p?.title ?? '');
     _descController = TextEditingController(text: p?.description ?? '');
@@ -41,10 +60,28 @@ class _ListProductScreenState extends State<ListProductScreen> {
     _materialsController = TextEditingController(text: p?.materials ?? '');
     _craftingProcessController = TextEditingController(text: p?.craftingProcess ?? '');
     _imageUrlController = TextEditingController(text: p?.images ?? '');
+    _uploadedImageUrl = p?.images;
     _tagsController = TextEditingController(text: p?.tags ?? '');
     if (p != null && AppConstants.categories.contains(p.category)) {
       _selectedCategory = p.category;
     }
+  }
+
+  void _resetForm() {
+    _titleController.clear();
+    _descController.clear();
+    _priceController.clear();
+    _quantityController.text = '1';
+    _materialsController.clear();
+    _craftingProcessController.clear();
+    _imageUrlController.clear();
+    _tagsController.clear();
+    setState(() {
+      _selectedImageBytes = null;
+      _uploadedImageUrl = null;
+      _isUploadingImage = false;
+      _selectedCategory = 'Ceramics';
+    });
   }
 
   @override
@@ -60,6 +97,144 @@ class _ListProductScreenState extends State<ListProductScreen> {
     super.dispose();
   }
 
+  Future<void> _pickAndUploadImage(ImageSource source) async {
+    try {
+      final XFile? file = await _picker.pickImage(
+        source: source,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
+
+      if (file == null) return;
+
+      final bytes = await file.readAsBytes();
+      final fileName = file.name.isNotEmpty ? file.name : 'artisan_craft_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+      setState(() {
+        _selectedImageBytes = bytes;
+        _isUploadingImage = true;
+      });
+
+      final res = await ApiClient.uploadFile('/products/upload', bytes, fileName);
+
+      if (res.containsKey('url')) {
+        final secureUrl = res['url'].toString();
+        setState(() {
+          _uploadedImageUrl = secureUrl;
+          _imageUrlController.text = secureUrl;
+          _isUploadingImage = false;
+        });
+
+        if (mounted) {
+          final isCloudinary = res['provider'] == 'cloudinary';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                isCloudinary
+                    ? 'Photo saved to Cloudinary!'
+                    : 'Photo saved successfully!',
+              ),
+              backgroundColor: AppColors.success,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        throw Exception('Server did not return image URL');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isUploadingImage = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Upload failed: ${e.toString()}'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showImageSourcePicker() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const Text(
+                'ATTACH CREATION PHOTO',
+                style: TextStyle(
+                  fontFamily: 'serif',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.2,
+                  color: AppColors.navy,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Capture piece with Camera or select high-res photo from Gallery',
+                style: TextStyle(fontSize: 12, color: AppColors.warmGrayLight),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.navy.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.camera_alt_outlined, color: AppColors.navy),
+                ),
+                title: const Text('Take Photo (Camera)', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.navy)),
+                subtitle: const Text('Snap your physical handcrafted work directly', style: TextStyle(fontSize: 11)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickAndUploadImage(ImageSource.camera);
+                },
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.gold.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.photo_library_outlined, color: AppColors.gold),
+                ),
+                title: const Text('Choose from Gallery', style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.navy)),
+                subtitle: const Text('Select a high-resolution image from your device', style: TextStyle(fontSize: 11)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickAndUploadImage(ImageSource.gallery);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _handleSave(String status) async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -70,6 +245,12 @@ class _ListProductScreenState extends State<ListProductScreen> {
       );
       return;
     }
+
+    final finalImageUrl = _uploadedImageUrl?.trim().isNotEmpty == true
+        ? _uploadedImageUrl!.trim()
+        : _imageUrlController.text.trim().isNotEmpty
+            ? _imageUrlController.text.trim()
+            : null;
 
     setState(() => _isSaving = true);
 
@@ -86,7 +267,7 @@ class _ListProductScreenState extends State<ListProductScreen> {
         'currency': 'INR',
         'quantity': int.tryParse(_quantityController.text.trim()) ?? 1,
         'tags': _tagsController.text.trim().isNotEmpty ? _tagsController.text.trim() : null,
-        'images': _imageUrlController.text.trim().isNotEmpty ? _imageUrlController.text.trim() : null,
+        'images': finalImageUrl,
         'status': status,
         'crafting_process': _craftingProcessController.text.trim().isNotEmpty ? _craftingProcessController.text.trim() : null,
       };
@@ -111,7 +292,12 @@ class _ListProductScreenState extends State<ListProductScreen> {
         ),
       );
 
-      Navigator.pop(context, true);
+      if (widget.isTab) {
+        _resetForm();
+        widget.onSaved?.call();
+      } else {
+        Navigator.pop(context, true);
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSaving = false);
@@ -127,16 +313,21 @@ class _ListProductScreenState extends State<ListProductScreen> {
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.editProduct != null;
+    final hasImage = _selectedImageBytes != null ||
+        (_uploadedImageUrl != null && _uploadedImageUrl!.isNotEmpty) ||
+        _imageUrlController.text.isNotEmpty;
 
     return Scaffold(
       backgroundColor: AppColors.beige,
       appBar: AppBar(
         backgroundColor: AppColors.surface,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.navy),
-          onPressed: () => Navigator.pop(context),
-        ),
+        leading: widget.isTab
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.arrow_back, color: AppColors.navy),
+                onPressed: () => Navigator.pop(context),
+              ),
         title: Text(
           isEdit ? 'EDIT CREATION' : 'LIST NEW WORK',
           style: const TextStyle(
@@ -155,7 +346,7 @@ class _ListProductScreenState extends State<ListProductScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Image Section Card
+              // Image Section Card with Camera Capture
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
@@ -166,47 +357,197 @@ class _ListProductScreenState extends State<ListProductScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'GALLERY IMAGERY',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.0, color: AppColors.warmGray),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'PIECE PHOTOGRAPHY',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.0,
+                            color: AppColors.warmGray,
+                          ),
+                        ),
+                        if (_uploadedImageUrl != null && _uploadedImageUrl!.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.success.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.check_circle, size: 12, color: AppColors.success),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Cloudinary Ready',
+                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.success),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 6),
                     const Text(
-                      'Add a high-resolution Cloudinary or photo URL showcasing your piece.',
+                      'Capture a clear photo of your craft using the camera or gallery.',
                       style: TextStyle(fontSize: 12, color: AppColors.warmGrayLight),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 16),
 
-                    // Image Preview if available
-                    if (_imageUrlController.text.isNotEmpty) ...[
+                    // Image Display / Upload Box
+                    if (_isUploadingImage)
                       Container(
-                        height: 160,
+                        height: 180,
                         width: double.infinity,
                         decoration: BoxDecoration(
                           color: AppColors.cream,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: AppColors.border),
                         ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.network(
-                            _imageUrlController.text,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Center(
-                              child: Text('Invalid image URL', style: TextStyle(fontSize: 11, color: AppColors.error)),
+                        child: const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircularProgressIndicator(valueColor: AlwaysStoppedAnimation(AppColors.gold)),
+                            SizedBox(height: 12),
+                            Text(
+                              'Uploading image to Cloudinary...',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.navy),
                             ),
+                          ],
+                        ),
+                      )
+                    else if (hasImage)
+                      Column(
+                        children: [
+                          Container(
+                            height: 200,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: AppColors.cream,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: _selectedImageBytes != null
+                                  ? Image.memory(_selectedImageBytes!, fit: BoxFit.cover)
+                                  : Image.network(
+                                      _uploadedImageUrl ?? _imageUrlController.text,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) => const Center(
+                                        child: Text('Invalid image preview', style: TextStyle(fontSize: 11, color: AppColors.error)),
+                                      ),
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppColors.navy,
+                                    side: const BorderSide(color: AppColors.border),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                  icon: const Icon(Icons.camera_alt, size: 16),
+                                  label: const Text('Change Photo', style: TextStyle(fontSize: 12)),
+                                  onPressed: _showImageSourcePicker,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, color: AppColors.error),
+                                onPressed: () {
+                                  setState(() {
+                                    _selectedImageBytes = null;
+                                    _uploadedImageUrl = null;
+                                    _imageUrlController.clear();
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+                      )
+                    else
+                      InkWell(
+                        onTap: _showImageSourcePicker,
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          height: 150,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: AppColors.cream,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.border, style: BorderStyle.solid),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.05),
+                                      blurRadius: 8,
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(Icons.add_a_photo_outlined, size: 28, color: AppColors.navy),
+                              ),
+                              const SizedBox(height: 10),
+                              const Text(
+                                'Tap to Take Photo or Pick Image',
+                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.navy),
+                              ),
+                              const SizedBox(height: 4),
+                              const Text(
+                                'Camera & Gallery supported • Auto-saved to Cloudinary',
+                                style: TextStyle(fontSize: 11, color: AppColors.warmGrayLight),
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                      const SizedBox(height: 12),
-                    ],
 
-                    CustomTextField(
-                      label: 'Image URL (Cloudinary / HTTPS)',
-                      hint: 'https://res.cloudinary.com/.../image.jpg',
-                      controller: _imageUrlController,
-                      onChanged: (v) => setState(() {}),
+                    const SizedBox(height: 12),
+
+                    // Toggle for manual URL input
+                    GestureDetector(
+                      onTap: () => setState(() => _showManualUrlInput = !_showManualUrlInput),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _showManualUrlInput ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                            size: 16,
+                            color: AppColors.warmGrayLight,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _showManualUrlInput ? 'Hide manual image URL' : 'Or enter custom image URL',
+                            style: const TextStyle(fontSize: 11, color: AppColors.warmGrayLight, decoration: TextDecoration.underline),
+                          ),
+                        ],
+                      ),
                     ),
+
+                    if (_showManualUrlInput) ...[
+                      const SizedBox(height: 12),
+                      CustomTextField(
+                        label: 'Direct Image URL',
+                        hint: 'https://res.cloudinary.com/.../image.jpg',
+                        controller: _imageUrlController,
+                        onChanged: (v) => setState(() {
+                          _uploadedImageUrl = v.trim();
+                        }),
+                      ),
+                    ],
                   ],
                 ),
               ),

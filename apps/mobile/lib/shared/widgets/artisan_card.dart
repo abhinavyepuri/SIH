@@ -46,7 +46,7 @@ class ArtisanCard extends StatelessWidget {
                     ? Image.network(
                         artisan.profileImage!,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _avatarFallback(),
+                        errorBuilder: (context, error, stackTrace) => _avatarFallback(),
                       )
                     : _avatarFallback(),
               ),

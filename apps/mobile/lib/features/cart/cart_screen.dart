@@ -37,6 +37,68 @@ class _CartScreenState extends State<CartScreen> {
     super.dispose();
   }
 
+  String _selectedPaymentMethod = 'stripe'; // 'stripe', 'phonepe', 'paytm', 'cod'
+
+  Future<void> _handleSingleItemCheckout(dynamic item) async {
+    final appState = AppState.of(context);
+    if (_nameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter your full name for delivery in the shipping section')),
+      );
+      return;
+    }
+
+    setState(() => _isPlacingOrder = true);
+
+    try {
+      final res = await ApiClient.post('/orders/', {
+        'customer_name': _nameController.text.trim(),
+        'customer_email': _emailController.text.trim().isNotEmpty ? _emailController.text.trim() : null,
+        'product_id': item.product.id,
+        'product_title': item.product.title,
+        'artisan_id': item.product.artisanId,
+        'quantity': item.quantity,
+        'price': item.product.price,
+        'status': _selectedPaymentMethod == 'cod' ? 'confirmed' : 'pending',
+      });
+
+      String? lastOrderId;
+      if (res is Map && res.containsKey('id')) {
+        lastOrderId = res['id'];
+      }
+
+      if (_selectedPaymentMethod == 'stripe') {
+        await ApiClient.post('/payment/create-checkout-session', {
+          'items': [
+            {
+              'name': item.product.title,
+              'price': item.product.price,
+              'quantity': item.quantity,
+            }
+          ],
+          'order_id': lastOrderId,
+          'customer_email': _emailController.text.trim().isNotEmpty ? _emailController.text.trim() : 'buyer@aesthete.in',
+          'success_url': 'http://localhost:3000/payment-success',
+          'cancel_url': 'http://localhost:3000/payment-cancelled',
+        });
+      }
+
+      // Remove only this single item from the cart
+      appState.cart.removeFromCart(item.product.id);
+
+      if (!mounted) return;
+      setState(() => _isPlacingOrder = false);
+
+      _showOrderConfirmationDialog(item.product.title);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isPlacingOrder = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Order failed: ${e.toString()}'), backgroundColor: AppColors.error),
+      );
+    }
+  }
+
   Future<void> _handleCheckout() async {
     final appState = AppState.of(context);
     final items = appState.cart.items;
@@ -52,17 +114,37 @@ class _CartScreenState extends State<CartScreen> {
     setState(() => _isPlacingOrder = true);
 
     try {
-      // Create orders for each product in cart via FastAPI
+      // Create orders for each product in cart via FastAPI with unit price
+      String? lastOrderId;
       for (final item in items) {
-        await ApiClient.post('/orders/', {
+        final res = await ApiClient.post('/orders/', {
           'customer_name': _nameController.text.trim(),
           'customer_email': _emailController.text.trim().isNotEmpty ? _emailController.text.trim() : null,
           'product_id': item.product.id,
           'product_title': item.product.title,
           'artisan_id': item.product.artisanId,
           'quantity': item.quantity,
-          'price': item.totalPrice,
-          'status': 'confirmed',
+          'price': item.product.price,
+          'status': _selectedPaymentMethod == 'cod' ? 'confirmed' : 'pending',
+        });
+        if (res is Map && res.containsKey('id')) {
+          lastOrderId = res['id'];
+        }
+      }
+
+      if (_selectedPaymentMethod == 'stripe') {
+        final stripeItems = items.map((i) => {
+          'name': i.product.title,
+          'price': i.product.price,
+          'quantity': i.quantity,
+        }).toList();
+
+        await ApiClient.post('/payment/create-checkout-session', {
+          'items': stripeItems,
+          'order_id': lastOrderId,
+          'customer_email': _emailController.text.trim().isNotEmpty ? _emailController.text.trim() : 'buyer@aesthete.in',
+          'success_url': 'http://localhost:3000/payment-success',
+          'cancel_url': 'http://localhost:3000/payment-cancelled',
         });
       }
 
@@ -71,58 +153,9 @@ class _CartScreenState extends State<CartScreen> {
       if (!mounted) return;
       setState(() => _isPlacingOrder = false);
 
-      // Show luxury confirmation dialog
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) => AlertDialog(
-          backgroundColor: AppColors.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 60,
-                height: 60,
-                decoration: const BoxDecoration(
-                  color: AppColors.successLight,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.check_circle_outline, color: AppColors.success, size: 36),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Order Placed Successfully!',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: 'serif',
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.navy,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Thank you for supporting indigenous master artisans. Your order has been dispatched to the atelier.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: AppColors.warmGray, height: 1.4),
-              ),
-              const SizedBox(height: 20),
-              CustomButton(
-                text: 'View My Orders →',
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (_) => const OrdersScreen()),
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
-      );
+      _showOrderConfirmationDialog('All ${items.length} items');
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isPlacingOrder = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -131,6 +164,59 @@ class _CartScreenState extends State<CartScreen> {
         ),
       );
     }
+  }
+
+  void _showOrderConfirmationDialog(String itemSummary) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              decoration: const BoxDecoration(
+                color: AppColors.successLight,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.check_circle_outline, color: AppColors.success, size: 36),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Order Placed Successfully!',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'serif',
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: AppColors.navy,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Your order for $itemSummary has been dispatched to the master atelier for authentic crafting.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 12, color: AppColors.warmGray, height: 1.4),
+            ),
+            const SizedBox(height: 20),
+            CustomButton(
+              text: 'View My Orders →',
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const OrdersScreen()),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -143,49 +229,91 @@ class _CartScreenState extends State<CartScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.surface,
         elevation: 0,
-        title: const Text(
-          'SHOPPING BAG',
-          style: TextStyle(
-            fontFamily: 'serif',
-            fontSize: 16,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 1.5,
-            color: AppColors.navy,
-          ),
+        centerTitle: false,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Text(
+              'Shopping Cart',
+              style: TextStyle(
+                fontFamily: 'serif',
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            Text(
+              'Direct from certified master ateliers',
+              style: TextStyle(
+                fontSize: 11,
+                color: AppColors.warmGray,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
       ),
       body: cart.items.isEmpty
           ? Center(
               child: Padding(
-                padding: const EdgeInsets.all(32),
+                padding: const EdgeInsets.symmetric(horizontal: 36),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Container(
-                      width: 80,
-                      height: 80,
-                      decoration: const BoxDecoration(
-                        color: AppColors.cream,
+                      width: 90,
+                      height: 90,
+                      decoration: BoxDecoration(
+                        color: AppColors.roseLight,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.shopping_bag_outlined, size: 40, color: AppColors.warmGrayLight),
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Your Bag is Empty',
-                      style: TextStyle(fontFamily: 'serif', fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.navy),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Explore our curated gallery to discover rare handcrafted treasures from master artisans.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 13, color: AppColors.warmGray),
+                      child: const Icon(
+                        Icons.shopping_bag_outlined,
+                        size: 42,
+                        color: AppColors.terracotta,
+                      ),
                     ),
                     const SizedBox(height: 24),
-                    CustomButton(
-                      text: 'Explore Collections →',
-                      width: 200,
-                      onPressed: () => Navigator.pop(context),
+                    const Text(
+                      'Your Cart is Clean & Empty',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'serif',
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'Explore verified Geographical Indication crafts from master artisans across India.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.warmGray,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                    SizedBox(
+                      height: 48,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.terracotta,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          elevation: 0,
+                        ),
+                        icon: const Icon(Icons.explore_outlined, size: 18),
+                        label: const Text(
+                          'Browse Marketplace',
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                      ),
                     ),
                   ],
                 ),
@@ -201,7 +329,7 @@ class _CartScreenState extends State<CartScreen> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: cart.items.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    separatorBuilder: (context, index) => const SizedBox(height: 12),
                     itemBuilder: (ctx, index) {
                       final item = cart.items[index];
                       final p = item.product;
@@ -283,13 +411,37 @@ class _CartScreenState extends State<CartScreen> {
                                       ),
                                     ],
                                   ),
+                                  const SizedBox(height: 10),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    height: 34,
+                                    child: ElevatedButton.icon(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppColors.roseLight,
+                                        foregroundColor: AppColors.terracotta,
+                                        elevation: 0,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                          side: const BorderSide(color: AppColors.terracottaLight),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                                      ),
+                                      icon: const Icon(Icons.bolt, size: 15),
+                                      label: Text(
+                                        'Order This Piece (₹${item.totalPrice.toInt()})',
+                                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                                      ),
+                                      onPressed: _isPlacingOrder ? null : () => _handleSingleItemCheckout(item),
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
 
                             // Delete Button
                             IconButton(
-                              icon: const Icon(Icons.close, size: 16, color: AppColors.warmGrayLight),
+                              icon: const Icon(Icons.close, size: 18, color: AppColors.warmGrayLight),
+                              tooltip: 'Remove from Bag',
                               onPressed: () => cart.removeFromCart(p.id),
                             ),
                           ],
@@ -327,6 +479,58 @@ class _CartScreenState extends State<CartScreen> {
                           hint: 'jane@example.com',
                           controller: _emailController,
                           keyboardType: TextInputType.emailAddress,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Payment Method Selector
+                  Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'CHOOSE PAYMENT METHOD',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.8, color: AppColors.warmGray),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildPaymentOption(
+                          id: 'stripe',
+                          icon: Icons.credit_card_outlined,
+                          title: 'Card / International',
+                          subtitle: 'Visa, Mastercard, Amex via Stripe',
+                          badge: 'RECOMMENDED',
+                        ),
+                        const SizedBox(height: 8),
+                        _buildPaymentOption(
+                          id: 'phonepe',
+                          icon: Icons.phone_android,
+                          title: 'PhonePe',
+                          subtitle: 'UPI, Wallet & Bank Transfer',
+                          badge: 'INDIA',
+                        ),
+                        const SizedBox(height: 8),
+                        _buildPaymentOption(
+                          id: 'paytm',
+                          icon: Icons.account_balance_wallet_outlined,
+                          title: 'Paytm',
+                          subtitle: 'Paytm Wallet, UPI & NetBanking',
+                          badge: 'INDIA',
+                        ),
+                        const SizedBox(height: 8),
+                        _buildPaymentOption(
+                          id: 'cod',
+                          icon: Icons.local_shipping_outlined,
+                          title: 'Cash on Delivery',
+                          subtitle: 'Pay when your handcrafted piece arrives',
                         ),
                       ],
                     ),
@@ -394,6 +598,83 @@ class _CartScreenState extends State<CartScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildPaymentOption({
+    required String id,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    String? badge,
+  }) {
+    final isSelected = _selectedPaymentMethod == id;
+
+    return InkWell(
+      onTap: () => setState(() => _selectedPaymentMethod = id),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.navy.withValues(alpha: 0.04) : AppColors.cream,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? AppColors.navy : AppColors.border,
+            width: isSelected ? 1.5 : 1.0,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: isSelected ? AppColors.navy : AppColors.warmGray, size: 22),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.navy),
+                      ),
+                      if (badge != null) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.gold.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            badge,
+                            style: const TextStyle(fontSize: 8, fontWeight: FontWeight.w800, color: AppColors.goldDark, letterSpacing: 0.5),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(fontSize: 11, color: AppColors.warmGray),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              width: 18,
+              height: 18,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isSelected ? AppColors.navy : AppColors.border,
+                  width: isSelected ? 5 : 2,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

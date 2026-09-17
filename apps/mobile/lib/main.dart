@@ -8,17 +8,17 @@ import 'features/onboarding/welcome_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const AestheteApp());
+  runApp(const ArohaApp());
 }
 
-class AestheteApp extends StatefulWidget {
-  const AestheteApp({super.key});
+class ArohaApp extends StatefulWidget {
+  const ArohaApp({super.key});
 
   @override
-  State<AestheteApp> createState() => _AestheteAppState();
+  State<ArohaApp> createState() => _ArohaAppState();
 }
 
-class _AestheteAppState extends State<AestheteApp> {
+class _ArohaAppState extends State<ArohaApp> {
   final _authProvider = AuthProvider();
   final _cartProvider = CartProvider();
   final _wishlistProvider = WishlistProvider();
@@ -53,7 +53,7 @@ class _AestheteAppState extends State<AestheteApp> {
       cart: _cartProvider,
       wishlist: _wishlistProvider,
       child: MaterialApp(
-        title: 'AESTHETE — Digital Craft Marketplace',
+        title: 'Aroha — Where Artists Meet the Market',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         home: const WelcomeScreen(),

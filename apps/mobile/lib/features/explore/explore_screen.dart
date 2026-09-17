@@ -8,8 +8,7 @@ import '../../shared/widgets/product_card.dart';
 import '../../shared/widgets/category_pill.dart';
 import '../products/product_detail_screen.dart';
 import '../wishlist/wishlist_screen.dart';
-import '../cart/cart_screen.dart';
-import '../auth/auth_screen.dart';
+import '../onboarding/welcome_screen.dart';
 
 class ExploreScreen extends StatefulWidget {
   final String? initialCategory;
@@ -190,7 +189,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     contentPadding: EdgeInsets.zero,
                     title: const Text('In Stock Only', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.navy)),
                     value: _inStockOnly,
-                    activeColor: AppColors.navy,
+                    activeTrackColor: AppColors.navy,
                     onChanged: (v) {
                       setSheetState(() => _inStockOnly = v);
                       setState(() {});
@@ -236,11 +235,53 @@ class _ExploreScreenState extends State<ExploreScreen> {
     );
   }
 
+  void _confirmSignOut(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Sign Out',
+          style: TextStyle(fontFamily: 'serif', fontWeight: FontWeight.w800, color: AppColors.navy),
+        ),
+        content: const Text(
+          'Are you sure you want to sign out of your connoisseur account?',
+          style: TextStyle(fontSize: 13, color: AppColors.warmGray),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.warmGray, fontWeight: FontWeight.w600)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.terracotta,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              elevation: 0,
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              AppState.of(context).auth.logout();
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+                (route) => false,
+              );
+            },
+            child: const Text('Sign Out', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final displayProducts = _filteredAndSortedProducts;
     final appState = AppState.of(context);
     final wishlistCount = appState.wishlist.count;
+    final isAuthenticated = appState.auth.isAuthenticated;
 
     return Scaffold(
       backgroundColor: AppColors.beige,
@@ -257,21 +298,21 @@ class _ExploreScreenState extends State<ExploreScreen> {
         title: const Column(
           children: [
             Text(
-              'AESTHETE',
+              'AROHA',
               style: TextStyle(
                 fontFamily: 'serif',
-                fontSize: 16,
+                fontSize: 18,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 2.0,
                 color: AppColors.navy,
               ),
             ),
             Text(
-              'CURATED GALLERY',
+              'where artists meet the market',
               style: TextStyle(
                 fontSize: 9,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.0,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
                 color: AppColors.gold,
               ),
             ),
@@ -305,6 +346,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
             onPressed: _showFilterSheet,
             tooltip: 'Filters',
           ),
+          if (isAuthenticated)
+            IconButton(
+              icon: const Icon(Icons.logout, color: AppColors.terracotta, size: 20),
+              tooltip: 'Sign Out',
+              onPressed: () => _confirmSignOut(context),
+            ),
         ],
       ),
       body: RefreshIndicator(
@@ -472,7 +519,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                           padding: const EdgeInsets.all(16),
                           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: _isGridView ? 2 : 1,
-                            childAspectRatio: _isGridView ? 0.68 : 1.3,
+                            childAspectRatio: _isGridView ? 0.65 : 0.85,
                             crossAxisSpacing: 14,
                             mainAxisSpacing: 14,
                           ),

@@ -1,6 +1,6 @@
 class AppConstants {
-  static const String appName = 'AESTHETE';
-  static const String appTagline = 'Digital Craft Marketplace';
+  static const String appName = 'Aroha';
+  static const String appTagline = 'where artists meet the market';
 
   static const List<String> categories = [
     'All Works',
@@ -46,6 +46,32 @@ class AppConstants {
     'Ladakh',
     'Lakshadweep',
     'Puducherry',
+  ];
+
+  static const List<String> craftCategories = [
+    'Ceramics',
+    'Textiles',
+    'Woodworking',
+    'Metalwork',
+    'Handicrafts',
+  ];
+
+  static const Map<String, String> languages = {
+    'en': 'English',
+    'hi': 'Hindi',
+    'te': 'Telugu',
+    'ta': 'Tamil',
+    'bn': 'Bengali',
+    'mr': 'Marathi',
+    'gu': 'Gujarati',
+  };
+
+  static const List<String> businessTypes = [
+    'Individual Artisan',
+    'Master Craftsman',
+    'Self-Help Group (SHG)',
+    'Artisan Cooperative',
+    'Small Studio',
   ];
 
   static const List<String> supportedLanguages = [

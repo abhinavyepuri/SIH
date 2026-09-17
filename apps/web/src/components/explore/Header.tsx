@@ -31,31 +31,17 @@ export default function CustomerHeader() {
 
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-border-light shadow-sm">
-      {/* Top Value / Announcement Bar */}
-      <div className="bg-navy text-white text-[11px] font-medium py-1.5 px-4 tracking-wider flex items-center justify-between">
-        <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
-          <span className="hidden sm:inline-block text-gold-muted font-serif italic">
-            Aesthete — The Curated Marketplace for Master Artisans
-          </span>
-          <div className="flex items-center gap-6 mx-auto sm:mx-0 text-white/90">
-            <span>✨ 100% Certified Authentic Craft</span>
-            <span className="hidden md:inline">· Direct Maker Compensation</span>
-            <span className="hidden lg:inline">· Handcrafted in India</span>
-          </div>
-          <div className="hidden sm:flex items-center gap-4 text-white/70">
-            <Link href="/login?role=artisan" className="hover:text-gold transition-colors text-[11px]">
-              Artisan Portal →
-            </Link>
-          </div>
-        </div>
-      </div>
-
       {/* Main Navigation Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between gap-4">
         {/* Brand Logo */}
         <div className="flex items-center gap-8">
-          <Link href="/" className="font-serif text-2xl tracking-[0.18em] font-bold text-navy hover:text-gold transition-colors">
-            AESTHETE
+          <Link href="/" className="flex flex-col group">
+            <span className="font-serif text-2xl tracking-[0.15em] font-bold text-navy group-hover:text-gold transition-colors">
+              AROHA
+            </span>
+            <span className="text-[9px] tracking-wider text-warm-gray lowercase font-medium -mt-1">
+              where artists meet the market
+            </span>
           </Link>
 
           {/* Primary Nav Links */}

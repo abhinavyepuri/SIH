@@ -47,6 +47,64 @@ const categoryHighlights = [
   },
 ];
 
+const spotlightItems = [
+  {
+    id: "spot-1",
+    title: "Jaipur Royal Blue Pottery",
+    subtitle: "Cobalt Floral Quartz Glazed Vase",
+    artisan: "Ram Narayan Sharma",
+    category: "Ceramics",
+    desc: "Crafted with pulverized quartz and fuller's earth rather than clay, fired once in traditional wood kilns with natural cobalt oxide glaze.",
+    gradient: "from-navy via-navy-light to-blue-950",
+    badge: "Master Work 1/5",
+    link: "/explore?category=Ceramics",
+  },
+  {
+    id: "spot-2",
+    title: "Pure Mulberry Chanderi Silk",
+    subtitle: "Heritage Zari Bordered Saree",
+    artisan: "Meenakshi Devi",
+    category: "Textiles",
+    desc: "Hand-spun pure silk woven on traditional pit looms with intricate real gold-plated zari weaves passed down generations.",
+    gradient: "from-rose-950 via-rose-900 to-amber-950",
+    badge: "Master Work 2/5",
+    link: "/explore?category=Textiles",
+  },
+  {
+    id: "spot-3",
+    title: "Saharanpur Brass Inlaid Teakwood",
+    subtitle: "Carved Artisan Keepsake Box",
+    artisan: "Iqbal Ahmed",
+    category: "Woodworking",
+    desc: "Carved from seasoned teakwood with hand-hammered floral sheet brass inlay work crafted by master woodcarvers.",
+    gradient: "from-amber-950 via-amber-900 to-stone-900",
+    badge: "Master Work 3/5",
+    link: "/explore?category=Woodworking",
+  },
+  {
+    id: "spot-4",
+    title: "Ancient Lost-Wax Dhokra Cast",
+    subtitle: "4,000-Year Metal Artistry",
+    artisan: "Bastar Tribal Guild",
+    category: "Metalwork",
+    desc: "Non-ferrous metal casting using beeswax models and clay molds, maintaining an unbroken tribal legacy dating to Mohenjo-daro.",
+    gradient: "from-zinc-900 via-stone-900 to-amber-950",
+    badge: "Master Work 4/5",
+    link: "/explore?category=Metalwork",
+  },
+  {
+    id: "spot-5",
+    title: "Khurja Glazed Terracotta",
+    subtitle: "Hand-Painted Ceremonial Vessel",
+    artisan: "Kamla Devi",
+    category: "Handicrafts",
+    desc: "Terracotta crafted with natural earthenware clay and hand-painted with mineral pigments, celebrating regional heritage.",
+    gradient: "from-stone-900 via-red-950 to-navy",
+    badge: "Master Work 5/5",
+    link: "/explore?category=Handicrafts",
+  },
+];
+
 const fallbackFeaturedProducts: Product[] = [
   {
     id: "feat-1",
@@ -121,8 +179,16 @@ export default function LandingPage() {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [artisans, setArtisans] = useState<Artisan[]>([]);
   const [loading, setLoading] = useState(true);
+  const [spotlightIndex, setSpotlightIndex] = useState(0);
 
   const totalCartCount = items.reduce((sum, item) => sum + item.cartQuantity, 0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSpotlightIndex((prev) => (prev + 1) % spotlightItems.length);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const loadMarketplaceData = async () => {
@@ -161,29 +227,17 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background selection:bg-gold-muted selection:text-navy">
-      {/* Top Announcement Bar */}
-      <div className="bg-navy text-white text-[11px] font-medium py-1.5 px-4 tracking-wider">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <span className="text-gold-muted font-serif italic hidden md:inline">
-            AESTHETE — Curated Indian Handcrafts &amp; Artisan Collectibles
-          </span>
-          <div className="flex items-center gap-4 mx-auto md:mx-0 text-white/90">
-            <span>✨ 100% Certified Authentic Craft</span>
-            <span>· Direct-from-Maker Payouts</span>
-            <span className="hidden sm:inline">· Handcrafted in India</span>
-          </div>
-          <Link href="/login?role=artisan" className="text-gold hover:underline text-[11px] hidden lg:inline">
-            Artisan Creator Studio →
-          </Link>
-        </div>
-      </div>
-
       {/* Main Header */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-border-light shadow-2xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-8">
-            <Link href="/" className="font-serif text-2xl sm:text-3xl tracking-[0.18em] font-bold text-navy">
-              AESTHETE
+            <Link href="/" className="flex flex-col group">
+              <span className="font-serif text-2xl sm:text-3xl tracking-[0.15em] font-bold text-navy group-hover:text-gold transition-colors">
+                AROHA
+              </span>
+              <span className="text-[10px] tracking-wide text-warm-gray lowercase font-medium -mt-1">
+                where artists meet the market
+              </span>
             </Link>
             <nav className="hidden lg:flex items-center gap-7 text-xs uppercase tracking-widest font-medium text-warm-gray">
               <Link href="/explore" className="hover:text-navy transition-colors">
@@ -337,43 +391,92 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Hero Visual Feature Card */}
+          {/* Hero Visual Feature Carousel (5 Spotlight Works) */}
           <div className="lg:col-span-5 relative">
-            <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-navy via-navy-light to-amber-950 p-8 text-white shadow-2xl border border-navy/20">
-              <div className="absolute top-0 right-0 p-8 opacity-15">
-                <svg className="w-48 h-48 text-gold" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                </svg>
-              </div>
-
-              <div className="relative z-10 space-y-6">
-                <div className="inline-block px-3 py-1 bg-gold text-navy rounded-full text-xs font-bold uppercase tracking-wider">
-                  Curator's Spotlight
-                </div>
-
-                <div className="space-y-2">
-                  <h3 className="font-serif text-2xl sm:text-3xl font-bold text-white">
-                    Jaipur Royal Blue Pottery
-                  </h3>
-                  <p className="text-sm text-gray-300 leading-relaxed">
-                    Crafted with pulverized quartz and fuller's earth rather than clay, fired once in traditional wood kilns with natural cobalt oxide glaze.
-                  </p>
-                </div>
-
-                <div className="p-4 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 flex items-center justify-between">
-                  <div>
-                    <span className="text-[11px] text-gray-300 block">Master Craftsman</span>
-                    <span className="text-sm font-semibold text-white">Ram Narayan Sharma</span>
+            {spotlightItems.map((item, idx) => {
+              if (idx !== spotlightIndex) return null;
+              return (
+                <div
+                  key={item.id}
+                  className={`relative rounded-3xl overflow-hidden bg-gradient-to-br ${item.gradient} p-8 text-white shadow-2xl border border-navy/20 transition-all duration-500 min-h-[380px] flex flex-col justify-between`}
+                >
+                  <div className="absolute top-0 right-0 p-8 opacity-15">
+                    <svg className="w-48 h-48 text-gold" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                    </svg>
                   </div>
-                  <Link
-                    href="/explore?category=Ceramics"
-                    className="px-4 py-2 bg-gold hover:bg-gold-light text-navy text-xs font-bold rounded-lg transition-colors"
-                  >
-                    View Series →
-                  </Link>
+
+                  <div className="relative z-10 space-y-5">
+                    <div className="flex items-center justify-between">
+                      <div className="inline-block px-3.5 py-1 bg-gold text-navy rounded-full text-xs font-bold uppercase tracking-wider shadow-sm">
+                        Curator's Spotlight
+                      </div>
+                      <span className="text-xs font-mono text-gold/90 font-medium px-2.5 py-0.5 rounded-full bg-white/10 backdrop-blur-md">
+                        {item.badge}
+                      </span>
+                    </div>
+
+                    <div className="space-y-2">
+                      <p className="text-xs text-gold uppercase tracking-widest font-semibold">{item.subtitle}</p>
+                      <h3 className="font-serif text-2xl sm:text-3xl font-bold text-white">
+                        {item.title}
+                      </h3>
+                      <p className="text-xs sm:text-sm text-gray-300 leading-relaxed line-clamp-3">
+                        {item.desc}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="relative z-10 space-y-4 pt-4">
+                    <div className="p-4 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] text-gray-300 uppercase tracking-widest block">Master Artisan</span>
+                        <span className="text-sm font-semibold text-white">{item.artisan}</span>
+                      </div>
+                      <Link
+                        href={item.link}
+                        className="px-4 py-2 bg-gold hover:bg-gold-light text-navy text-xs font-bold rounded-lg transition-colors shadow-sm"
+                      >
+                        View Series →
+                      </Link>
+                    </div>
+
+                    {/* Carousel Controls & Slide Indicators */}
+                    <div className="flex items-center justify-between pt-1">
+                      <div className="flex items-center gap-1.5">
+                        {spotlightItems.map((_, dotIdx) => (
+                          <button
+                            key={dotIdx}
+                            onClick={() => setSpotlightIndex(dotIdx)}
+                            className={`h-2 rounded-full transition-all duration-300 ${
+                              dotIdx === spotlightIndex ? "w-6 bg-gold" : "w-2 bg-white/30 hover:bg-white/60"
+                            }`}
+                            aria-label={`Go to slide ${dotIdx + 1}`}
+                          />
+                        ))}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setSpotlightIndex((prev) => (prev === 0 ? spotlightItems.length - 1 : prev - 1))}
+                          className="w-7 h-7 rounded-full bg-white/15 hover:bg-white/30 flex items-center justify-between justify-center text-white text-xs transition-colors"
+                          title="Previous Spotlight"
+                        >
+                          ‹
+                        </button>
+                        <button
+                          onClick={() => setSpotlightIndex((prev) => (prev + 1) % spotlightItems.length)}
+                          className="w-7 h-7 rounded-full bg-white/15 hover:bg-white/30 flex items-center justify-between justify-center text-white text-xs transition-colors"
+                          title="Next Spotlight"
+                        >
+                          ›
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              );
+            })}
           </div>
         </div>
       </section>

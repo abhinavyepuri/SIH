@@ -7,105 +7,6 @@ import { SearchInput, ProductCard } from "@/components/ui";
 import { fetchApi } from "@/lib/api/client";
 import type { Product } from "@/types";
 
-const fallbackExploreProducts: Product[] = [
-  {
-    id: "exp-1",
-    artisan_id: "art-1",
-    artisan_name: "Ram Narayan Sharma",
-    title: "Hand-Turned Blue Pottery Decorative Vase",
-    description: "Traditional Jaipur quartz & fuller's earth glazed ceramic vase with cobalt floral motifs.",
-    category: "Ceramics",
-    materials: "Quartz Stone, Raw Glazes",
-    price: 3450,
-    currency: "INR",
-    quantity: 4,
-    tags: "pottery,jaipur,blue-glaze",
-    images: "",
-    status: "published",
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: "exp-2",
-    artisan_id: "art-2",
-    artisan_name: "Meenakshi Devi",
-    title: "Pure Mulberry Handloom Chanderi Silk Saree",
-    description: "Hand-spun pure silk with antique zari borders crafted on traditional pit looms.",
-    category: "Textiles",
-    materials: "Chanderi Silk, Antique Zari",
-    price: 8900,
-    currency: "INR",
-    quantity: 2,
-    tags: "silk,chanderi,handloom",
-    images: "",
-    status: "published",
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: "exp-3",
-    artisan_id: "art-3",
-    artisan_name: "Iqbal Ahmed",
-    title: "Floral Brass Inlaid Teakwood Keepsake Box",
-    description: "Carved from sustainably sourced seasoned teak with hand-hammered brass inlay work.",
-    category: "Woodworking",
-    materials: "Seasoned Teakwood, Sheet Brass",
-    price: 2600,
-    currency: "INR",
-    quantity: 6,
-    tags: "teak,brass-inlay,carved",
-    images: "",
-    status: "published",
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: "exp-4",
-    artisan_id: "art-4",
-    artisan_name: "Bastar Tribal Guild",
-    title: "Authentic Lost-Wax Cast Dhokra Brass Figurine",
-    description: "Ancient 4,000-year tribal metal casting technique preserving generational motifs.",
-    category: "Metalwork",
-    materials: "Recycled Brass, Beeswax Core",
-    price: 4200,
-    currency: "INR",
-    quantity: 3,
-    tags: "dhokra,tribal,lost-wax",
-    images: "",
-    status: "published",
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: "exp-5",
-    artisan_id: "art-5",
-    artisan_name: "Sita Ram",
-    title: "Khurja Hand-Glazed Terracotta Tea Service",
-    description: "Set of 4 earthy stoneware cups with matte ash glazes, fired in wood-fired kilns.",
-    category: "Ceramics",
-    materials: "Terracotta, Natural Ash Glaze",
-    price: 1850,
-    currency: "INR",
-    quantity: 8,
-    tags: "khurja,terracotta,cups",
-    images: "",
-    status: "published",
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: "exp-6",
-    artisan_id: "art-6",
-    artisan_name: "Rashid Ali",
-    title: "Hand-Knotted Kashmiri Pashmina Wool Stole",
-    description: "Ultra-fine Changthangi cashmere goat wool hand-embroidered with Sozni floral needles.",
-    category: "Textiles",
-    materials: "Grade-A Pashmina Wool",
-    price: 12500,
-    currency: "INR",
-    quantity: 1,
-    tags: "pashmina,kashmir,wool",
-    images: "",
-    status: "published",
-    created_at: new Date().toISOString(),
-  },
-];
-
 type SortOption = "featured" | "price-asc" | "price-desc" | "newest";
 type PriceFilter = "all" | "under-2000" | "2000-5000" | "above-5000";
 
@@ -148,39 +49,27 @@ function ExploreContent() {
           } else if (Array.isArray(data)) {
             currentProducts = data;
           }
-          if (currentProducts.length > 0) {
-            setProducts(currentProducts);
-          } else {
-            // Apply client-side category filter on fallback data if backend has no results
-            const filteredFallback = selectedCategory === "All Works"
-              ? fallbackExploreProducts
-              : fallbackExploreProducts.filter((p) => p.category.toLowerCase() === selectedCategory.toLowerCase());
-            setProducts(filteredFallback);
-          }
+          setProducts(currentProducts);
         } else {
-          setProducts(fallbackExploreProducts);
+          setProducts([]);
         }
 
-        // Fetch categories dynamically
+        // Fetch categories dynamically from published products in database
         if (categories.length === 1) {
           const allRes = await fetchApi(`/products/marketplace`);
           if (allRes.ok) {
             const allData = await allRes.json();
-            const allProds = allData.products || (Array.isArray(allData) ? allData : fallbackExploreProducts);
+            const allProds = allData.products || (Array.isArray(allData) ? allData : []);
             const uniqueCats = [
               ...new Set(allProds.map((p: Product) => p.category).filter(Boolean)),
             ] as string[];
             if (uniqueCats.length > 0) {
               setCategories(["All Works", ...uniqueCats]);
-            } else {
-              setCategories(["All Works", "Ceramics", "Textiles", "Woodworking", "Metalwork", "Handicrafts"]);
             }
-          } else {
-            setCategories(["All Works", "Ceramics", "Textiles", "Woodworking", "Metalwork", "Handicrafts"]);
           }
         }
       } catch (err) {
-        setProducts(fallbackExploreProducts);
+        setProducts([]);
       } finally {
         setLoading(false);
       }

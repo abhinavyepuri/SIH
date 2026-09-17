@@ -6,6 +6,7 @@ import '../../models/product.dart';
 import '../../shared/widgets/custom_button.dart';
 import '../../shared/widgets/auth_guard_dialog.dart';
 import '../cart/cart_screen.dart';
+import '../orders/orders_screen.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final String productId;
@@ -135,7 +136,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     ? Image.network(
                         images[_selectedImageIndex < images.length ? _selectedImageIndex : 0],
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _buildFallbackImage(),
+                        errorBuilder: (context, error, stackTrace) => _buildFallbackImage(),
                       )
                     : _buildFallbackImage(),
               ),
@@ -377,11 +378,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               showAuthRequiredDialog(context, action: 'complete your craft order');
                               return;
                             }
-                            appState.cart.addToCart(p, quantity: _selectedQuantity);
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const CartScreen()),
-                            );
+                            _showDirectBuySheet(context, p);
                           },
                         ),
                       ),
@@ -391,6 +388,305 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               ),
             ),
             const SizedBox(height: 30),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDirectBuySheet(BuildContext context, Product p) {
+    final appState = AppState.of(context);
+    final user = appState.auth.currentUser;
+    final nameController = TextEditingController(text: user?.name ?? '');
+    final emailController = TextEditingController(text: user?.email ?? '');
+    String selectedPayment = 'stripe';
+    bool isOrdering = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setSheetState) => Container(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          ),
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.warmGrayLight.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Direct Artisan Checkout',
+                      style: TextStyle(
+                        fontFamily: 'serif',
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.navy,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 20),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+                const Divider(color: AppColors.border),
+                const SizedBox(height: 12),
+                // Item Preview
+                Row(
+                  children: [
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: AppColors.cream,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: p.primaryImage != null && p.primaryImage!.isNotEmpty
+                            ? Image.network(p.primaryImage!, fit: BoxFit.cover)
+                            : const Icon(Icons.brush_outlined, color: AppColors.warmGrayLight),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            p.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: AppColors.navy),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Qty: $_selectedQuantity • ₹${(p.price * _selectedQuantity).toInt()}',
+                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: AppColors.terracotta),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // Shipping inputs
+                TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(
+                    labelText: 'Full Name for Delivery',
+                    labelStyle: const TextStyle(fontSize: 12, color: AppColors.warmGray),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: emailController,
+                  decoration: InputDecoration(
+                    labelText: 'Email for Tracking Updates',
+                    labelStyle: const TextStyle(fontSize: 12, color: AppColors.warmGray),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'PAYMENT METHOD',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.warmGray, letterSpacing: 0.8),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _buildRadioChip('stripe', 'Card / Stripe', selectedPayment, (v) => setSheetState(() => selectedPayment = v)),
+                    _buildRadioChip('phonepe', 'PhonePe', selectedPayment, (v) => setSheetState(() => selectedPayment = v)),
+                    _buildRadioChip('paytm', 'Paytm', selectedPayment, (v) => setSheetState(() => selectedPayment = v)),
+                    _buildRadioChip('cod', 'Cash on Delivery', selectedPayment, (v) => setSheetState(() => selectedPayment = v)),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.terracotta,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    onPressed: isOrdering
+                        ? null
+                        : () async {
+                            if (nameController.text.trim().isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Please enter your full name for delivery')),
+                              );
+                              return;
+                            }
+                            setSheetState(() => isOrdering = true);
+                            try {
+                              final res = await ApiClient.post('/orders/', {
+                                'customer_name': nameController.text.trim(),
+                                'customer_email': emailController.text.trim().isNotEmpty ? emailController.text.trim() : null,
+                                'product_id': p.id,
+                                'product_title': p.title,
+                                'artisan_id': p.artisanId,
+                                'quantity': _selectedQuantity,
+                                'price': p.price,
+                                'status': selectedPayment == 'cod' ? 'confirmed' : 'pending',
+                              });
+
+                              String? lastOrderId;
+                              if (res is Map && res.containsKey('id')) {
+                                lastOrderId = res['id'];
+                              }
+
+                              if (selectedPayment == 'stripe') {
+                                await ApiClient.post('/payment/create-checkout-session', {
+                                  'items': [
+                                    {
+                                      'name': p.title,
+                                      'price': p.price,
+                                      'quantity': _selectedQuantity,
+                                    }
+                                  ],
+                                  'order_id': lastOrderId,
+                                  'customer_email': emailController.text.trim().isNotEmpty ? emailController.text.trim() : 'buyer@aesthete.in',
+                                  'success_url': 'http://localhost:3000/payment-success',
+                                  'cancel_url': 'http://localhost:3000/payment-cancelled',
+                                });
+                              }
+
+                              // Remove this item from the cart if present
+                              appState.cart.removeFromCart(p.id);
+
+                              if (!context.mounted) return;
+                              Navigator.pop(ctx);
+
+                              _showSuccessDialog(context, p.title);
+                            } catch (e) {
+                              setSheetState(() => isOrdering = false);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Order failed: ${e.toString()}'), backgroundColor: AppColors.error),
+                                );
+                              }
+                            }
+                          },
+                    child: isOrdering
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : Text(
+                            'Place Order • ₹${(p.price * _selectedQuantity).toInt()}',
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15),
+                          ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRadioChip(String id, String label, String selected, ValueChanged<String> onSelected) {
+    final isSelected = id == selected;
+    return ChoiceChip(
+      label: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+          color: isSelected ? Colors.white : AppColors.navy,
+        ),
+      ),
+      selected: isSelected,
+      selectedColor: AppColors.terracotta,
+      backgroundColor: AppColors.cream,
+      onSelected: (_) => onSelected(id),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: isSelected ? AppColors.terracotta : AppColors.border),
+      ),
+    );
+  }
+
+  void _showSuccessDialog(BuildContext context, String itemTitle) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              decoration: const BoxDecoration(
+                color: AppColors.successLight,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.check_circle_outline, color: AppColors.success, size: 36),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Order Placed Successfully!',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'serif',
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: AppColors.navy,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Your direct order for "$itemTitle" has been placed with the master atelier.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 12, color: AppColors.warmGray, height: 1.4),
+            ),
+            const SizedBox(height: 20),
+            CustomButton(
+              text: 'View My Orders →',
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const OrdersScreen()),
+                );
+              },
+            ),
           ],
         ),
       ),

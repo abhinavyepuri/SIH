@@ -59,10 +59,15 @@ export default function AdminSidebar() {
   return (
     <aside className="w-64 bg-white border-r border-border-light min-h-screen flex flex-col">
       <div className="px-6 py-5 border-b border-border-light">
-        <Link href="/" className="font-serif text-xl tracking-[0.12em] font-bold text-navy">
-          AESTHETE
+        <Link href="/" className="flex flex-col group">
+          <span className="font-serif text-xl tracking-[0.12em] font-bold text-navy group-hover:text-gold transition-colors">
+            AROHA
+          </span>
+          <span className="text-[9px] text-warm-gray lowercase font-medium">
+            where artists meet the market
+          </span>
         </Link>
-        <p className="text-[10px] tracking-[0.2em] text-warm-gray-light uppercase mt-0.5">
+        <p className="text-[10px] tracking-[0.2em] text-warm-gray-light uppercase mt-1">
           Admin Portal (Inspector View)
         </p>
       </div>
