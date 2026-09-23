@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 from pydantic import Field
+from pathlib import Path
 from typing import Optional
 
 
@@ -64,7 +65,11 @@ class Settings(BaseSettings):
     PAYTM_ENV: Optional[str] = Field(default="test", validation_alias="PAYTM_ENV")
 
     model_config = {
-        "env_file": ".env",
+        "env_file": (
+            str(Path(__file__).resolve().parent.parent.parent / ".env"),
+            ".env",
+            "../.env",
+        ),
         "env_file_encoding": "utf-8",
         "extra": "ignore",
     }
